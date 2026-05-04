@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Since</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #faf7f2;
+            --ink: #1a1410;
+            --ink2: #5a5048;
+            --ink3: #a09080;
+            --rule: #e0d8cc;
+            --accent: #c0392b;
+            --accent-pale: #f9eeec;
+            --serif: 'Playfair Display', Georgia, serif;
+            --mono: 'IBM Plex Mono', monospace;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--mono);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Subtle paper texture via repeating pattern */
+        body {
+            background-image:
+                repeating-linear-gradient(90deg,
+                    transparent,
+                    transparent 40px,
+                    rgba(0, 0, 0, 0.012) 40px,
+                    rgba(0, 0, 0, 0.012) 41px),
+                repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 40px,
+                    rgba(0, 0, 0, 0.012) 40px,
+                    rgba(0, 0, 0, 0.012) 41px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem 1.25rem;
+        }
+
+        /* ── Page shell ── */
+        .page {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* Masthead */
+        .masthead {
+            border-top: 2.5px solid var(--ink);
+            border-bottom: 1px solid var(--ink);
+            padding: 8px 0 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 2rem;
+        }
+
+        .masthead .pub {
+            font-family: var(--serif);
+            font-size: 11px;
+            font-style: italic;
+            color: var(--ink2);
+            letter-spacing: 0.04em;
+        }
+
+        .masthead .live-dot {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 9px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .masthead .live-dot::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: blink 1.4s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.2
+            }
+        }
+
+        /* Headline block */
+        .headline {
+            margin-bottom: 1.75rem;
+        }
+
+        .headline h1 {
+            font-family: var(--serif);
+            font-size: clamp(28px, 8vw, 40px);
+            font-weight: 700;
+            line-height: 1.15;
+            color: var(--ink);
+            margin-bottom: 6px;
+        }
+
+        .headline .since-date {
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: var(--ink3);
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+
+        .headline .since-date span {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Divider rule */
+        .rule {
+            height: 1px;
+            background: var(--rule);
+            margin: 1.5rem 0;
+        }
+
+        /* Big elapsed display */
+        .elapsed-display {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 1.75rem;
+            animation: fadeUp 0.7s ease both;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .unit-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--rule);
+            transition: background 0.2s;
+        }
+
+        .unit-row:last-child {
+            border-bottom: none;
+        }
+
+        .unit-row .u-val {
+            font-family: var(--serif);
+            font-size: clamp(36px, 10vw, 52px);
+            font-weight: 700;
+            line-height: 1;
+            color: var(--ink);
+            min-width: 3ch;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        .unit-row.accent .u-val {
+            color: var(--accent);
+        }
+
+        .unit-row .u-label {
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--ink3);
+            flex: 1;
+        }
+
+        .unit-row .u-sub {
+            font-size: 10px;
+            color: var(--ink3);
+            font-style: italic;
+            font-family: var(--serif);
+            text-align: right;
+        }
+
+        /* Total seconds ticker */
+        .ticker-wrap {
+            background: var(--ink);
+            color: var(--bg);
+            border-radius: 6px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 1.75rem;
+            animation: fadeUp 0.9s ease both;
+        }
+
+        .ticker-wrap .t-label {
+            font-size: 9px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(250, 247, 242, 0.4);
+        }
+
+        .ticker-wrap .t-val {
+            font-family: var(--serif);
+            font-size: clamp(22px, 6vw, 30px);
+            font-weight: 400;
+            font-style: italic;
+            letter-spacing: 0.01em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .ticker-wrap .t-sub {
+            font-size: 9px;
+            color: rgba(250, 247, 242, 0.35);
+            letter-spacing: 0.1em;
+        }
+
+        /* Start date badge */
+        .from-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--accent-pale);
+            border: 1px solid rgba(192, 57, 43, 0.15);
+            border-radius: 6px;
+            padding: 12px 14px;
+            animation: fadeUp 1s ease both;
+        }
+
+        .from-badge .badge-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .from-badge .badge-body {}
+
+        .from-badge .badge-label {
+            font-size: 9px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .from-badge .badge-date {
+            font-family: var(--serif);
+            font-size: 14px;
+            color: var(--ink);
+        }
+
+        /* Footer rule */
+        .footer {
+            border-top: 1px solid var(--rule);
+            margin-top: 2rem;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            letter-spacing: 0.12em;
+            color: var(--ink3);
+            text-transform: uppercase;
+        }
+
+        .footer span {
+            font-style: italic;
+            font-family: var(--serif);
+            font-size: 10px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page">
+
+        <div class="masthead">
+            <div class="pub">elapsed · record</div>
+            <div class="live-dot">live</div>
+        </div>
+
+        <div class="headline">
+            <h1 id="headline-text">Time Since</h1>
+            <div class="since-date">Counting from <span id="display-date">—</span></div>
+        </div>
+
+        <div class="elapsed-display" id="elapsed-display">
+            <div class="unit-row accent">
+                <div class="u-val" id="val-days">0</div>
+                <div class="u-label">days</div>
+                <div class="u-sub" id="sub-weeks">0 weeks</div>
+            </div>
+            <div class="unit-row">
+                <div class="u-val" id="val-hours">00</div>
+                <div class="u-label">hours</div>
+                <div class="u-sub"></div>
+            </div>
+            <div class="unit-row">
+                <div class="u-val" id="val-minutes">00</div>
+                <div class="u-label">minutes</div>
+                <div class="u-sub"></div>
+            </div>
+            <div class="unit-row">
+                <div class="u-val" id="val-seconds">00</div>
+                <div class="u-label">seconds</div>
+                <div class="u-sub"></div>
+            </div>
+        </div>
+
+        <div class="ticker-wrap">
+            <div class="t-label">Total seconds elapsed</div>
+            <div class="t-val" id="total-seconds">0</div>
+            <div class="t-sub" id="total-label">updating every second</div>
+        </div>
+
+        <div class="from-badge">
+            <div class="badge-icon">📍</div>
+            <div class="badge-body">
+                <div class="badge-label">Started from</div>
+                <div class="badge-date" id="badge-date-full">—</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>Time Since</div>
+            <span id="footer-now">—</span>
+        </div>
+
+    </div>
+
+    <script>
+        /* ═══════════════════════════════════════════════════════
+           ▸▸ CHANGE THIS to your target date/time
+              Format: 'YYYY-MM-DDTHH:MM:SS'  (local time)
+              Or just a date: 'YYYY-MM-DD'   (midnight local)
+           ═══════════════════════════════════════════════════════ */
+        const START_DATE = '2026-05-03T21:24:00';
+
+        /* Optional: give it a label shown in the headline */
+        const LABEL = 'Time Since';
+        /* ═══════════════════════════════════════════════════════ */
+
+        const startTime = new Date(START_DATE);
+
+        // Human-readable display
+        const fmtOpts = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const fmtShort = { year: 'numeric', month: 'short', day: 'numeric' };
+        document.getElementById('headline-text').textContent = LABEL;
+        document.getElementById('display-date').textContent = startTime.toLocaleDateString(undefined, fmtShort);
+        document.getElementById('badge-date-full').textContent = startTime.toLocaleString(undefined, fmtOpts);
+
+        function pad(n) { return String(Math.floor(n)).padStart(2, '0'); }
+
+        function commas(n) {
+            return Math.floor(n).toLocaleString();
+        }
+
+        function tick() {
+            const now = new Date();
+            const diffMs = now - startTime;
+
+            if (diffMs < 0) {
+                // Future date — show zeroes
+                ['val-days', 'val-hours', 'val-minutes', 'val-seconds'].forEach(id => {
+                    document.getElementById(id).textContent = '00';
+                });
+                document.getElementById('total-seconds').textContent = '0';
+                document.getElementById('sub-weeks').textContent = '0 weeks';
+                return;
+            }
+
+            const totalSec = Math.floor(diffMs / 1000);
+            const days = Math.floor(totalSec / 86400);
+            const hours = Math.floor((totalSec % 86400) / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+            const weeks = Math.floor(days / 7);
+
+            document.getElementById('val-days').textContent = days.toLocaleString();
+            document.getElementById('val-hours').textContent = pad(hours);
+            document.getElementById('val-minutes').textContent = pad(minutes);
+            document.getElementById('val-seconds').textContent = pad(seconds);
+            document.getElementById('sub-weeks').textContent = weeks === 1 ? '1 week' : weeks.toLocaleString() + ' weeks';
+            document.getElementById('total-seconds').textContent = commas(totalSec);
+
+            // Footer now
+            document.getElementById('footer-now').textContent =
+                now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        tick();
+        setInterval(tick, 1000);
+    </script>
+</body>
+
+</html>
